@@ -10,8 +10,17 @@ user = Blueprint("user", __name__)
 
 # establish one cursor connection vs
 # in each endpoint reconnect and disconnect cur
+# connection cursort jobban megnézni a connection.commit() miatt
+# utolsó tesztek, unit test nem volt
+"""
+Increasing load-> database reading and writing will be slowed,
+only one cursor for the operations
+concurrent writing requests to the database-> not handled
+"""
 cur = connect_to_db().cursor()
 
+#ez biztos jó így?
+connection = connect_to_db()
 
 @user.route("/user", methods=["POST"])
 def create_user():
@@ -34,7 +43,7 @@ def create_user():
         return jsonify(message="user created")
     except Exception as e:
         print(e)
-        return jsonify(message="Something went wrong")
+        return jsonify(message="Something went wrong"), 500
 
 
 @user.route("/user", methods=["GET"])
@@ -47,7 +56,7 @@ def list_all_users():
         return jsonify(users)
     except Exception as e:
         print(e)
-        return jsonify(message="Something went wrong")
+        return jsonify(message="Something went wrong"), 500
 
 
 @user.route("/user", methods=["DELETE"])
@@ -58,12 +67,12 @@ def delete_user():
         cur.execute(sql_query,
                     ([data['email'],]))
         if not cur.rowcount:
-            return jsonify(message="user does not exist")
+            return jsonify(message="user does not exist"), 404
         connection.commit()
         return jsonify(message="user deleted")
     except Exception as e:
         print(e)
-        return jsonify(message="Something went wrong")
+        return jsonify(message="Something went wrong"), 500
 
 
 @user.route("/user/modify", methods=["PATCH"])
@@ -82,12 +91,12 @@ def update_user():
                      data['password'],
                      data['email'],))
         if not cur.rowcount:
-            return jsonify(message="user does not exist")
+            return jsonify(message="user does not exist"), 404
         connection.commit()
         return jsonify(message="user updated")
     except Exception as e:
         print(e)
-        return jsonify(message="Something went wrong")
+        return jsonify(message="Something went wrong"), 500
 
 
 @user.route("/login", methods=["GET"])
@@ -106,7 +115,7 @@ def login():
                     (data['email'],
                      data['password'],))
         if not cur.rowcount:
-            return jsonify(message="no user found")
+            return jsonify(message="no user found"), 404
         sql_query = "UPDATE users \
                     SET last_login= %s \
                     WHERE users.email= %s;"
@@ -117,4 +126,4 @@ def login():
         return jsonify(message="sucessful login")
     except Exception as e:
         print(e)
-        return jsonify(message="something went wrong")
+        return jsonify(message="something went wrong"), 500
